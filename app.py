@@ -5,7 +5,7 @@ import numpy as np
 from PIL import Image
 
 # Load model
-model = tf.keras.models.load_model("tomato_mobilenetv2_model.keras")
+model = tf.keras.models.load_model("tomato_mobilenetv2_model_fixed.h5")
 
 # Class names
 class_names = [
