@@ -1,11 +1,35 @@
-
 import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
 
-# Load model
-model = tf.keras.models.load_model("tomato_mobilenetv2_model_fixed.h5")
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import (
+    GlobalAveragePooling2D,
+    Dense,
+    Dropout
+)
+
+# Rebuild model architecture
+base_model = MobileNetV2(
+    weights='imagenet',
+    include_top=False,
+    input_shape=(224, 224, 3)
+)
+
+base_model.trainable = False
+
+model = Sequential([
+    base_model,
+    GlobalAveragePooling2D(),
+    Dense(256, activation='relu'),
+    Dropout(0.5),
+    Dense(10, activation='softmax')
+])
+
+# Load saved weights
+model.load_weights("mobilenet_weights.weights.h5")
 
 # Class names
 class_names = [
@@ -21,7 +45,21 @@ class_names = [
     'Tomato_healthy'
 ]
 
-# Treatment recommendations
+# Clean display names
+display_names = {
+    'Tomato_Bacterial_spot': 'Tomato Bacterial Spot',
+    'Tomato_Early_blight': 'Tomato Early Blight',
+    'Tomato_Late_blight': 'Tomato Late Blight',
+    'Tomato_Leaf_Mold': 'Tomato Leaf Mold',
+    'Tomato_Septoria_leaf_spot': 'Tomato Septoria Leaf Spot',
+    'Tomato_Spider_mites_Two_spotted_spider_mite': 'Tomato Spider Mites',
+    'Tomato__Target_Spot': 'Tomato Target Spot',
+    'Tomato__Tomato_YellowLeaf__Curl_Virus': 'Tomato Yellow Leaf Curl Virus',
+    'Tomato__Tomato_mosaic_virus': 'Tomato Mosaic Virus',
+    'Tomato_healthy': 'Healthy Tomato Leaf'
+}
+
+# Treatment dictionary
 treatment_dict = {
 
     "Tomato_Bacterial_spot":
@@ -55,8 +93,8 @@ treatment_dict = {
     "The plant appears healthy. Continue proper care and monitoring."
 }
 
-# Streamlit page config
-st.set_page_config(page_title="Tomato Leaf Disease Classifier")
+# Streamlit UI
+st.set_page_config(page_title="Tomato Leaf Disease Classification")
 
 st.title("🍅 Tomato Leaf Disease Classification")
 
@@ -65,54 +103,45 @@ st.write(
     "and receive treatment advice."
 )
 
-# File uploader
 uploaded_file = st.file_uploader(
-    "Upload a Tomato Leaf Image",
+    "Upload Tomato Leaf Image",
     type=["jpg", "jpeg", "png"]
 )
 
 if uploaded_file is not None:
 
-    # Open image
-    image = Image.open(uploaded_file)
+    image = Image.open(uploaded_file).convert("RGB")
 
-    # Display image
     st.image(image, caption="Uploaded Image", use_container_width=True)
 
-    # Preprocess image
+    # Preprocess
     img = image.resize((224,224))
     img_array = np.array(img) / 255.0
-
-    # Ensure RGB
-    if img_array.shape[-1] == 4:
-        img_array = img_array[:, :, :3]
-
     img_array = np.expand_dims(img_array, axis=0)
 
-    # Prediction
+    # Predict
     predictions = model.predict(img_array)
 
-    predicted_class = class_names[np.argmax(predictions)]
+    predicted_index = np.argmax(predictions)
 
-    confidence = np.max(predictions) * 100
+    predicted_class = class_names[predicted_index]
 
-    # Output
+    confidence = float(np.max(predictions) * 100)
+
     st.subheader("Prediction Result")
 
-    st.success(f"Disease: {predicted_class}")
+    st.success(display_names[predicted_class])
 
     st.info(f"Confidence Score: {confidence:.2f}%")
 
-    # Treatment
     st.subheader("Treatment Recommendation")
 
     st.write(treatment_dict[predicted_class])
 
-    # Probability chart
     st.subheader("Prediction Probabilities")
 
     prob_dict = {
-        class_names[i]: float(predictions[0][i])
+        display_names[class_names[i]]: float(predictions[0][i])
         for i in range(len(class_names))
     }
 
@@ -120,7 +149,7 @@ if uploaded_file is not None:
 
 # Disclaimer
 st.warning(
-    "Disclaimer: This prediction system is for educational "
-    "and research purposes only. Always consult agricultural "
-    "experts before taking large-scale farming decisions."
+    "Disclaimer: This system is intended for educational "
+    "and research purposes only. Please consult agricultural "
+    "experts before making large-scale farming decisions."
 )
