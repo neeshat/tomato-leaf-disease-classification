@@ -64,7 +64,7 @@ https://www.kaggle.com/datasets/emmarex/plantdisease
 - app.py
 - requirements.txt
 - tomato_mobilenetv2_model.keras
-- Tomato_Leaf_Disease_Classification.ipynb
+- Tomato_Leaf_Disease_Classification_.ipynb
 
 ---
 
